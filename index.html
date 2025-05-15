@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consulta CNPJ - BrasilAPI</title>
+
+<!-- Adicionar Leaflet CSS -->
+   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+   crossorigin=""/>
+
+<!-- Adicionar jsPDF via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<!-- Adicionar Leaflet JavaScript -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+   integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+   crossorigin=""></script>
+
+  <style>
+    :root {
+      --primary-color: #4CAF50;
+      --bg-color: #f0f2f5;
+      --text-color: #333;
+      --card-bg: #f9f9f9;
+      --card-border: #4CAF50;
+    }
+
+    .dark-theme {
+      --primary-color: #6abf69;
+      --bg-color: #121212;
+      --text-color: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --card-border: #6abf69;
+    }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 20px;
+      transition: background 0.3s, color 0.3s;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+    }
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+    .input-group {
+      display: flex;
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+    input {
+      padding: 12px;
+      font-size: 16px;
+      flex-grow: 1;
+      border: 1px solid #ddd;
+      border-radius: 5px 0 0 5px;
+      transition: border-color 0.3s;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 0 5px 5px 0;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    button:focus, input:focus {
+      outline: 2px solid #4CAF50;
+      outline-offset: 2px;
+    }
+    #resultado {
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      width: 100%;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      text-align: left;
+      display: none;
+    }
+    .erro {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary-color);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+      display: none;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .card {
+      border-left: 4px solid var(--card-border);
+      margin-bottom: 10px;
+      padding: 8px;
+      background-color: var(--card-bg);
+      border-radius: 4px;
+    }
+    .atividade-item {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-bottom: 1px solid #eee;
+    }
+    @media (max-width: 600px) {
+      .container {
+        width: 90%;
+      }
+    }
+        /* Adicionar estilo para o mapa */
+        #mapa {
+      height: 400px;
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* Melhorar design dos botões de ação */
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .actions button {
+      flex: 1;
+      border-radius: 5px;
+      margin: 0;
+    }
+
+    /* Estilo para o botão de ver no mapa */
+    .btn-map {
+      padding: 8px 15px;
+      background-color: #4285F4;
+      border-radius: 5px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    /* Estilos para o Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  margin: 10% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  max-width: 800px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.modal-close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.modal-close:hover,
+.modal-close:focus {
+  color: #000;
+  text-decoration: none;
+}
+
+/* Estilos para as tabs */
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+  border-radius: 5px 5px 0 0;
+}
+
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 10px 16px;
+  transition: 0.3s;
+  font-size: 14px;
+  border-radius: 0;
+}
+
+.tab button:hover {
+  background-color: #ddd;
+}
+
+.tab button.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.tabcontent {
+  display: none;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 5px 5px;
+}
+
+/* Estilos para o footer */
+.footer {
+  margin-top: 30px;
+  text-align: center;
+  padding: 10px;
+  font-size: 0.9em;
+  color: #777;
+  border-top: 1px solid #eee;
+}
+
+/* Botão de informações */
+.info-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  border: none;
+  z-index: 100;
+}
+
+.info-button:hover {
+  background-color: #45a049;
+  transform: scale(1.05);
+}
+
+/* Adicionar na seção de estilos */
+.mode-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--bg-color);
+  border: 2px solid var(--primary-color);
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Consulta CNPJ</h1>
+    
+    <div class="input-group">
+      <input type="text" id="cnpj" placeholder="Digite o CNPJ" maxlength="18" aria-label="Insira o CNPJ para consulta">
+      <button id="btnConsultar" onclick="consultarCNPJ()" aria-label="Consultar CNPJ">Consultar</button>
+    </div>
+    
+    <div class="loader" id="loader"></div>
+    <div id="resultado"></div>
+
+  </div>
+
+  <script>
+    const cnpjInput = document.getElementById('cnpj');
+    const btnConsultar = document.getElementById('btnConsultar');
+    const resultadoDiv = document.getElementById('resultado');
+    const loader = document.getElementById('loader');
+    const cacheConsultas = {};
+    const ultimasConsultas = [];
+
+    // Adicionar tratamento de erros robusto
+    window.addEventListener('error', function(e) {
+      console.error('Erro capturado:', e.error);
+      // Evitar que erros no mapa ou em componentes externos afetem a aplicação principal
+      if (e.message && (e.message.includes('Map container') || e.message.includes('Leaflet'))) {
+        e.preventDefault();
+        return true;
+      }
+    });
+
+    // Verificar se a API está acessível antes de tentar consultas
+    async function verificarAPIStatus() {
+      try {
+        const response = await fetch('https://brasilapi.com.br/api/cep/v1/01001000');
+        return response.ok;
+      } catch (error) {
+        console.error("Erro ao verificar status da API:", error);
+        return false;
+      }
+    }
+
+    // Formata o CNPJ enquanto o usuário digita
+    cnpjInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length > 14) value = value.slice(0, 14);
+      
+      if (value.length > 12) {
+        value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+      } else if (value.length > 8) {
+        value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, "$1.$2.$3/$4");
+      } else if (value.length > 5) {
+        value = value.replace(/^(\d{2})(\d{3})(\d+)$/, "$1.$2.$3");
+      } else if (value.length > 2) {
+        value = value.replace(/^(\d{2})(\d+)$/, "$1.$2");
+      }
+      
+      e.target.value = value;
+
+      if (e.target.value.length === 18) {
+        const cnpjLimpo = formatarCNPJ(e.target.value);
+        if (validarCNPJ(cnpjLimpo)) {
+          cnpjInput.style.borderColor = '#4CAF50';
+        } else {
+          cnpjInput.style.borderColor = '#e74c3c';
+        }
+      } else {
+        cnpjInput.style.borderColor = '#ddd';
+      }
+    });
+
+    // Permitir consulta ao pressionar Enter
+    cnpjInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        consultarCNPJ();
+      }
+    });
+
+    function formatarCNPJ(cnpj) {
+      return cnpj.replace(/\D/g, '');
+    }
+
+    // Validação completa de CNPJ
+    function validarCNPJ(cnpj) {
+      cnpj = cnpj.replace(/[^\d]/g, '');
+      
+      if (cnpj.length !== 14) return false;
+      
+      // Elimina CNPJs inválidos conhecidos
+      if (/^(\d)\1+$/.test(cnpj)) return false;
+      
+      // Validação dos dígitos verificadores
+      let tamanho = cnpj.length - 2;
+      let numeros = cnpj.substring(0, tamanho);
+      const digitos = cnpj.substring(tamanho);
+      let soma = 0;
+      let pos = tamanho - 7;
+      
+      // Validação do primeiro dígito
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      
+      let resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(0)) return false;
+      
+      // Validação do segundo dígito
+      tamanho = tamanho + 1;
+      numeros = cnpj.substring(0, tamanho);
+      soma = 0;
+      pos = tamanho - 7;
+      
+      for (let i = tamanho; i >= 1; i--) {
+        soma += numeros.charAt(tamanho - i) * pos--;
+        if (pos < 2) pos = 9;
+      }
+      
+      resultado = soma % 11 < 2 ? 0 : 11 - soma % 11;
+      if (resultado != digitos.charAt(1)) return false;
+      
+      return true;
+    }
+
+    function formatarData(dataString) {
+      if (!dataString) return 'Não informado';
+      const data = new Date(dataString);
+      return data.toLocaleDateString('pt-BR');
+    }
+
+    function sanitizeHTML(str) {
+      const temp = document.createElement('div');
+      temp.textContent = str;
+      return temp.innerHTML;
+    }
+
+    function podeConsultar() {
+      const agora = Date.now();
+      ultimasConsultas.push(agora);
+      
+      // Remover timestamps antigos (mais de 1 minuto)
+      while (ultimasConsultas.length > 0 && ultimasConsultas[0] < agora - 60000) {
+        ultimasConsultas.shift();
+      }
+      
+      // Permitir no máximo 5 consultas por minuto
+      return ultimasConsultas.length <= 5;
+    }
+
+    // Atualizar a função consultarCNPJ para mostrar mensagens de erro mais informativas
+    // Adicionar no início da função consultarCNPJ
+    async function consultarCNPJ() {
+      try {
+        // Remover botões de ação anteriores se existirem
+        const acoesBotoesAnteriores = document.querySelector('.actions');
+        if (acoesBotoesAnteriores) {
+          acoesBotoesAnteriores.remove();
+        }
+        
+        // Verificar se a API está respondendo
+        const apiOk = await verificarAPIStatus();
+        if (!apiOk) {
+          resultadoDiv.innerHTML = `
+            <p class="erro">Serviço de consulta indisponível no momento.</p>
+            <p>Motivos possíveis:</p>
+            <ul>
+              <li>O site BrasilAPI está fora do ar</li>
+              <li>Seu navegador está bloqueando requisições por motivos de segurança (CORS)</li>
+              <li>Você atingiu o limite de consultas permitidas</li>
+            </ul>
+            <p>Recomendações:</p>
+            <ul>
+              <li>Aguarde alguns minutos e tente novamente</li>
+              <li>Utilize uma extensão como "CORS Unblock" ou "Allow CORS"</li>
+              <li>Hospede esta página em um servidor web em vez de abri-la diretamente do arquivo</li>
+            </ul>
+          `;
+          resultadoDiv.style.display = 'block';
+          return;
+        }
+        
+        if (!podeConsultar()) {
+          resultadoDiv.innerHTML = '<p class="erro">Muitas consultas em pouco tempo. Aguarde alguns segundos.</p>';
+          resultadoDiv.style.display = 'block';
+          return;
+        }
+        
+        const cnpj = formatarCNPJ(cnpjInput.value);
+        resultadoDiv.style.display = 'none';
+        
+        if (!cnpj || cnpj.length !== 14) {
+          resultadoDiv.innerHTML = '<p class="erro">Digite um CNPJ válido com 14 números.</p>';
+          resultadoDiv.style.display = 'block';
+          return;
+        }
+
+        if (!validarCNPJ(cnpj)) {
+        resultadoDiv.innerHTML = '<p class="erro">CNPJ inválido. Verifique os dígitos informados.</p>';
+        resultadoDiv.style.display = 'block';
+        return; // Adicionado return para interromper execução
+        }
+
+        // Mostrar loader e desabilitar botão
+        loader.style.display = 'block';
+        btnConsultar.disabled = true;
+
+        try {
+          const data = await consultarCNPJComCache(cnpj);
+
+          // Formatar as atividades secundárias
+          let atividadesSecundarias = '';
+          if (data.cnae_fiscal_secundaria && data.cnae_fiscal_secundaria.length > 10) {
+            const primeiras = data.cnae_fiscal_secundaria.slice(0, 10);
+            const restantes = data.cnae_fiscal_secundaria.slice(10);
+            
+            atividadesSecundarias = `
+              <h3>Atividades Secundárias (${data.cnae_fiscal_secundaria.length})</h3>
+              <div id="primeiras-atividades">
+                ${primeiras.map(atividade => `<div class="atividade-item"><strong>${atividade.codigo}</strong> - ${sanitizeHTML(atividade.descricao)}</div>`).join('')}
+              </div>
+              <button id="mostrar-mais" class="btn-link">Mostrar mais ${restantes.length} atividades</button>
+              <div id="mais-atividades" style="display: none">
+                ${restantes.map(atividade => `<div class="atividade-item"><strong>${atividade.codigo}</strong> - ${sanitizeHTML(atividade.descricao)}</div>`).join('')}
+              </div>
+            `;
+            
+            // Adicionar evento depois de renderizar
+            setTimeout(() => {
+              document.getElementById('mostrar-mais').addEventListener('click', function() {
+                document.getElementById('mais-atividades').style.display = 'block';
+                this.style.display = 'none';
+              });
+            }, 100);
+          } else if (data.cnae_fiscal_secundaria && data.cnae_fiscal_secundaria.length > 0) {
+            atividadesSecundarias = '<h3>Atividades Secundárias:</h3>';
+            data.cnae_fiscal_secundaria.forEach(atividade => {
+              atividadesSecundarias += `
+                <div class="atividade-item">
+                  <strong>${atividade.codigo}</strong> - ${sanitizeHTML(atividade.descricao)}
+                </div>
+              `;
+            });
+          }
+          
+          // Preparar a seção de sócios, se disponível
+          let sociosHTML = '';
+          if (data.qsa && data.qsa.length > 0) {
+            sociosHTML = `
+              <div class="card">
+                <h3>Quadro Societário</h3>
+                <div class="socios-lista">
+                  ${data.qsa.map(socio => `
+                    <div class="socio-item">
+                      <p><strong>${sanitizeHTML(socio.nome)}</strong></p>
+                      <p>Cargo: ${sanitizeHTML(socio.qual || 'Não informado')}</p>
+                      ${socio.qual_rep_legal ? `<p>Representante Legal: ${sanitizeHTML(socio.qual_rep_legal)}</p>` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }
+          
+          // Informações de filiais
+          let filiaisHTML = '';
+          if (data.codigo_tipo_logradouro === '1') {
+            filiaisHTML = `
+              <p><strong>Tipo:</strong> Matriz</p>
+            `;
+          } else if (data.codigo_tipo_logradouro === '2') {
+            filiaisHTML = `
+              <p><strong>Tipo:</strong> Filial</p>
+              <p><strong>CNPJ Matriz:</strong> ${data.cnpj_matriz || 'Não informado'}</p>
+            `;
+          }
+          
+          // Informações tributárias
+          let tributarioHTML = '';
+          if (data.opcao_pelo_simples !== undefined || data.opcao_pelo_mei !== undefined) {
+            tributarioHTML = `
+              <div class="card">
+                <h3>Informações Tributárias</h3>
+                <p><strong>Optante pelo Simples:</strong> ${data.opcao_pelo_simples ? 'Sim' : 'Não'}</p>
+                <p><strong>Optante pelo MEI:</strong> ${data.opcao_pelo_mei ? 'Sim' : 'Não'}</p>
+                ${data.data_opcao_pelo_simples ? `<p><strong>Data de Opção pelo Simples:</strong> ${formatarData(data.data_opcao_pelo_simples)}</p>` : ''}
+                ${data.data_exclusao_pelo_simples ? `<p><strong>Data de Exclusão do Simples:</strong> ${formatarData(data.data_exclusao_pelo_simples)}</p>` : ''}
+              </div>
+            `;
+          }
+          
+          // Informações sobre porte e funcionários (estimado)
+          let porteHTML = '';
+          if (data.porte) {
+            let funcionariosEstimado = 'Não informado';
+            
+            if (data.porte === 'MICRO EMPRESA') {
+              funcionariosEstimado = '1 a 19 funcionários (estimado)';
+            } else if (data.porte === 'EMPRESA DE PEQUENO PORTE') {
+              funcionariosEstimado = '20 a 99 funcionários (estimado)';
+            } else if (data.porte === 'DEMAIS') {
+              funcionariosEstimado = '100 ou mais funcionários (estimado)';
+            }
+            
+            porteHTML = `
+              <p><strong>Porte:</strong> ${sanitizeHTML(data.porte)}</p>
+              <p><strong>Funcionários:</strong> ${funcionariosEstimado}</p>
+            `;
+          }
+
+          // Tente gerar um logotipo estimado para a empresa (baseado no nome)
+          const logoHTML = `
+            <div class="empresa-logo">
+              <div class="logo-placeholder">
+                ${data.nome_fantasia ? data.nome_fantasia.substring(0, 2).toUpperCase() : data.razao_social.substring(0, 2).toUpperCase()}
+              </div>
+            </div>
+          `;
+          
+          resultadoDiv.innerHTML = `
+            <div class="empresa-header">
+              ${logoHTML}
+              <div class="empresa-info">
+                <h2>${sanitizeHTML(data.razao_social)}</h2>
+                <p class="cnpj-display">CNPJ: ${cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")}</p>
+              </div>
+            </div>
+            
+            <div class="card">
+              <h3>Dados Básicos</h3>
+              <p><strong>Nome Fantasia:</strong> ${sanitizeHTML(data.nome_fantasia || 'Não informado')}</p>
+              <p><strong>Data de Abertura:</strong> ${formatarData(data.data_inicio_atividade)}</p>
+              ${porteHTML}
+              <p><strong>Natureza Jurídica:</strong> ${sanitizeHTML(data.natureza_juridica)}</p>
+              <p><strong>Situação Cadastral:</strong> ${sanitizeHTML(data.descricao_situacao_cadastral)}</p>
+              ${data.data_situacao_cadastral ? `<p><strong>Data da Situação Cadastral:</strong> ${formatarData(data.data_situacao_cadastral)}</p>` : ''}
+              <p><strong>Capital Social:</strong> R$ ${data.capital_social ? data.capital_social.toLocaleString('pt-BR', {minimumFractionDigits: 2}) : 'Não informado'}</p>
+              ${filiaisHTML}
+            </div>
+            
+            <div class="card">
+              <h3>Endereço</h3>
+              <p>${sanitizeHTML(data.logradouro)}, ${sanitizeHTML(data.numero || 's/n')}${data.complemento ? ' - ' + sanitizeHTML(data.complemento) : ''}</p>
+              <p>${sanitizeHTML(data.bairro)} - ${sanitizeHTML(data.municipio)}/${sanitizeHTML(data.uf)}</p>
+              <p>CEP: ${data.cep ? data.cep.replace(/^(\d{5})(\d{3})$/, "$1-$2") : 'Não informado'}</p>
+              
+              <button class="btn-map" onclick="mostrarMapa('${sanitizeHTML(data.logradouro)}, ${sanitizeHTML(data.numero || 's/n')}, ${sanitizeHTML(data.municipio)}, ${sanitizeHTML(data.uf)}')">
+                <i class="fa fa-map-marker"></i> Ver no mapa
+              </button>
+            </div>
+
+            <div id="mapa" style="display:none;"></div>
+            
+            <div class="card">
+              <h3>Atividade Principal</h3>
+              <p><strong>${sanitizeHTML(data.cnae_fiscal)}</strong> - ${sanitizeHTML(data.cnae_fiscal_descricao)}</p>
+            </div>
+            
+            ${atividadesSecundarias ? `<div class="card">${atividadesSecundarias}</div>` : ''}
+            
+            ${sociosHTML}
+            
+            ${tributarioHTML}
+            
+            <div class="card">
+              <h3>Contato</h3>
+              <p><strong>Telefone:</strong> ${sanitizeHTML(data.ddd_telefone_1 || 'Não informado')}</p>
+              ${data.ddd_telefone_2 ? `<p><strong>Telefone 2:</strong> ${sanitizeHTML(data.ddd_telefone_2)}</p>` : ''}
+              <p><strong>Email:</strong> ${sanitizeHTML(data.email || 'Não informado')}</p>
+            </div>
+          `;
+
+          // Adicionar CSS para o logo e cabeçalho da empresa
+          const style = document.createElement('style');
+          style.textContent = `
+            .empresa-header {
+              display: flex;
+              align-items: center;
+              margin-bottom: 20px;
+            }
+            .empresa-logo {
+              margin-right: 20px;
+            }
+            .logo-placeholder {
+              width: 80px;
+              height: 80px;
+              background-color: var(--primary-color);
+              color: white;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 32px;
+              font-weight: bold;
+            }
+            .empresa-info {
+              flex: 1;
+            }
+            .cnpj-display {
+              color: #666;
+              margin-top: 5px;
+            }
+            .socios-lista {
+              margin-top: 10px;
+            }
+            .socio-item {
+              padding: 8px 0;
+              border-bottom: 1px solid #eee;
+            }
+            .socio-item:last-child {
+              border-bottom: none;
+            }
+          `;
+          document.head.appendChild(style);
+
+          salvarHistorico(cnpj, data.razao_social);
+
+          // No final da função consultarCNPJ(), após mostrar o resultado:
+          // Adicionar os botões de ação após o resultado
+          const acoesBotoes = document.createElement('div');
+          acoesBotoes.className = 'actions';
+          acoesBotoes.innerHTML = `
+            <button onclick="imprimirResultado()">Imprimir</button>
+            <button onclick="exportarPDF()">Exportar PDF</button>
+            <button onclick="compartilharResultado('${cnpj}', '${data.razao_social}')">Compartilhar</button>
+          `;
+          resultadoDiv.insertAdjacentElement('afterend', acoesBotoes);
+        } catch (error) {
+          resultadoDiv.innerHTML = `<p class="erro">${error.message}</p>`;
+        } finally {
+          loader.style.display = 'none';
+          btnConsultar.disabled = false;
+          resultadoDiv.style.display = 'block';
+        }
+      } catch (error) {
+        resultadoDiv.innerHTML = `
+          <p class="erro">${error.message}</p>
+          <p>Se o erro persistir, verifique:</p>
+          <ul>
+            <li>Sua conexão com a internet</li>
+            <li>Se você está utilizando o navegador corretamente</li>
+            <li>Se você atingiu o limite de consultas da API</li>
+          </ul>
+        `;
+        resultadoDiv.style.display = 'block';
+      } finally {
+        loader.style.display = 'none';
+        btnConsultar.disabled = false;
+      }
+    }
+
+
+    // Melhorar a função consultarCNPJComCache para lidar com CORS e rate limiting
+    async function consultarCNPJComCache(cnpj) {
+      // Verificar se já temos no cache
+      if (cacheConsultas[cnpj]) {
+        console.log("Usando dados do cache para", cnpj);
+        return cacheConsultas[cnpj];
+      }
+      
+      // Simulação de atraso para evitar sobrecarga de requisições
+      // Ajuda a evitar o erro 429 (Too Many Requests)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        // Tentativa 1: API BrasilAPI
+        try {
+          const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+          
+          // Se recebemos uma resposta 429 (Too Many Requests), precisamos esperar
+          if (response.status === 429) {
+            // Informar o usuário
+            throw new Error("Limite de consultas excedido. Aguarde alguns segundos e tente novamente.");
+          }
+          
+          // Se houver outro erro da API
+          if (!response.ok) {
+            if (response.status === 404) {
+              throw new Error("CNPJ não encontrado na base de dados.");
+            } else {
+              throw new Error(`Erro na consulta: ${response.status}`);
+            }
+          }
+          
+          // Resposta bem-sucedida
+          const data = await response.json();
+          cacheConsultas[cnpj] = data;
+          
+          // Limpar cache se ficar muito grande
+          if (Object.keys(cacheConsultas).length > 50) {
+            const chaves = Object.keys(cacheConsultas);
+            delete cacheConsultas[chaves[0]];
+          }
+          
+          return data;
+        } catch (error) {
+          // Se for um erro de CORS ou rate limit, tentamos utilizar um proxy CORS
+          if (error.message.includes("CORS") || error.message.includes("Limite de consultas")) {
+            throw new Error(
+              "Não foi possível acessar a API diretamente. Você está abrindo o arquivo localmente. " + 
+              "Para evitar erros de CORS, utilize uma extensão como 'CORS Unblock' ou hospede a página em um servidor."
+            );
+          }
+          
+          throw error;
+        }
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    // Adicionar consulta via proxies CORS públicos
+    async function consultarCNPJComProxy(cnpj) {
+      try {
+        // Usando allOrigins como proxy CORS público
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)}`;
+        const response = await fetch(proxyUrl);
+        
+        if (!response.ok) {
+          throw new Error("Erro ao consultar via proxy");
+        }
+        
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        throw new Error("Falha na consulta via proxy: " + error.message);
+      }
+    }
+
+    // Implementar função salvarHistorico modificada para evitar duplicações
+    function salvarHistorico(cnpj, nome) {
+      try {
+        // Obter histórico existente
+        let historico = [];
+        try {
+          historico = JSON.parse(localStorage.getItem('historicoConsultas') || '[]');
+        } catch (e) {
+          console.error("Erro ao ler histórico:", e);
+          localStorage.removeItem('historicoConsultas');
+          historico = [];
+        }
+        
+        // Garantir que historico é um array
+        if (!Array.isArray(historico)) {
+          historico = [];
+        }
+        
+        // Verificar se o CNPJ já existe no histórico e remover
+        historico = historico.filter(item => item.cnpj !== cnpj);
+        
+        // Adicionar a nova consulta no início do array
+        historico.unshift({
+          cnpj: cnpj,
+          nome: nome || "Empresa",
+          data: new Date().toISOString()
+        });
+        
+        // Limitar a 10 itens
+        if (historico.length > 10) {
+          historico = historico.slice(0, 10);
+        }
+        
+        // Salvar no localStorage
+        localStorage.setItem('historicoConsultas', JSON.stringify(historico));
+        
+        // Atualizar UI
+        atualizarHistoricoUI();
+      } catch (error) {
+        console.error("Erro ao salvar histórico:", error);
+      }
+    }
+
+    // Implementação da função atualizarHistoricoUI melhorada
+    function atualizarHistoricoUI() {
+      try {
+        // Verificar se o elemento de histórico existe, senão criar
+        let historicoElem = document.getElementById('historicoConsultas');
+        if (!historicoElem) {
+          historicoElem = document.createElement('div');
+          historicoElem.id = 'historicoConsultas';
+          historicoElem.className = 'card';
+          historicoElem.style.marginTop = '20px';
+          
+          // Inserir antes do final do container
+          document.querySelector('.container').appendChild(historicoElem);
+        }
+        
+        // Obter histórico do localStorage
+        let historico = [];
+        try {
+          historico = JSON.parse(localStorage.getItem('historicoConsultas') || '[]');
+        } catch (e) {
+          console.error("Erro ao obter histórico:", e);
+          localStorage.removeItem('historicoConsultas');
+        }
+        
+        // Verificar se temos itens no histórico
+        if (!Array.isArray(historico) || historico.length === 0) {
+          historicoElem.style.display = 'none';
+          return;
+        }
+        
+        // Mostrar o histórico
+        historicoElem.style.display = 'block';
+        
+        // Adicionar título e lista formatada
+        let html = `
+          <h3>Consultas recentes</h3>
+          <ul class="historico-lista" style="list-style: none; padding: 0; margin: 0;">
+        `;
+        
+        // Adicionar cada item do histórico
+        historico.forEach((item) => {
+          // Formatar data/hora
+          let dataFormatada = "Data não disponível";
+          try {
+            const data = new Date(item.data);
+            dataFormatada = data.toLocaleDateString('pt-BR') + ' ' + 
+                            data.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+          } catch (e) {
+            console.error("Erro ao formatar data:", e);
+          }
+          
+          // Formatar CNPJ
+          const cnpjFormatado = item.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+          
+          // Adicionar item à lista
+          html += `
+            <li style="padding: 12px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; gap: 6px;">
+              <div>
+                <strong style="font-size: 16px;">${sanitizeHTML(item.nome || 'Empresa')}</strong>
+                <span style="color: #888; font-size: 0.8em; float: right">${dataFormatada}</span>
+              </div>
+              <div style="color: #666;">CNPJ: ${cnpjFormatado}</div>
+              <div>
+                <button onclick="consultarHistorico('${item.cnpj}')" 
+                        style="font-size: 12px; padding: 4px 8px; background-color: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">
+                  Consultar novamente
+                </button>
+              </div>
+            </li>
+          `;
+        });
+        
+        html += '</ul>';
+        historicoElem.innerHTML = html;
+      } catch (error) {
+        console.error("Erro ao atualizar UI do histórico:", error);
+      }
+    }
+
+    // Melhorar a função consultarHistorico
+    function consultarHistorico(cnpj) {
+    // Remover botões de ação anteriores se existirem
+    const acoesBotoesAnteriores = document.querySelector('.actions');
+    if (acoesBotoesAnteriores) {
+        acoesBotoesAnteriores.remove();
+    }
+    
+    // Formatar CNPJ para exibição
+    cnpjInput.value = cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    
+    // Executar a consulta com um pequeno atraso para garantir que a UI foi atualizada
+    setTimeout(() => consultarCNPJ(), 50);
+    }
+
+    // Corrigir a função imprimirResultado substituindo as variáveis const por let
+    function imprimirResultado() {
+      if (resultadoDiv.style.display === 'none') {
+        alert('Faça uma consulta primeiro.');
+        return;
+      }
+      
+      // Preparar a página para impressão
+      const conteudoOriginal = document.body.innerHTML;
+      
+      // Criar uma versão de impressão
+      const conteudoImpressao = `
+        <html>
+          <head>
+            <title>Consulta CNPJ - Resultado</title>
+            <style>
+              body { font-family: Arial, sans-serif; color: #333; }
+              .card { border-left: 4px solid #4CAF50; margin-bottom: 15px; padding: 10px; }
+            </style>
+          </head>
+          <body>
+            <h1 style="text-align: center;">Consulta CNPJ</h1>
+            ${resultadoDiv.innerHTML}
+            <div style="margin-top: 30px; font-size: 0.8em; text-align: center; color: #777;">
+              Consulta realizada em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
+            </div>
+          </body>
+        </html>
+      `;
+      
+      // Substituir o conteúdo da página
+      document.body.innerHTML = conteudoImpressao;
+      
+      // Imprimir
+      window.print();
+      
+      // Restaurar o conteúdo original
+      document.body.innerHTML = conteudoOriginal;
+      
+      // Armazenar referências temporárias (usando let em vez de const)
+      let cnpjInputTemp = document.getElementById('cnpj');
+      let btnConsultarTemp = document.getElementById('btnConsultar');
+      let resultadoDivTemp = document.getElementById('resultado');
+      let loaderTemp = document.getElementById('loader');
+      
+      // Restaurar variáveis globais
+      cnpjInput = cnpjInputTemp;
+      btnConsultar = btnConsultarTemp;
+      resultadoDiv = resultadoDivTemp;
+      loader = loaderTemp;
+      
+      // Recarregar eventos
+      recarregarEventos();
+      
+      // Exibir histórico
+      atualizarHistoricoUI();
+    }
+
+    // Função para recarregar eventos após impressão
+    function recarregarEventos() {
+      // Formata o CNPJ enquanto o usuário digita
+      cnpjInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 14) value = value.slice(0, 14);
+        
+        if (value.length > 12) {
+          value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+        } else if (value.length > 8) {
+          value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d+)$/, "$1.$2.$3/$4");
+        } else if (value.length > 5) {
+          value = value.replace(/^(\d{2})(\d{3})(\d+)$/, "$1.$2.$3");
+        } else if (value.length > 2) {
+          value = value.replace(/^(\d{2})(\d+)$/, "$1.$2");
+        }
+        
+        e.target.value = value;
+  
+        if (e.target.value.length === 18) {
+          const cnpjLimpo = formatarCNPJ(e.target.value);
+          if (validarCNPJ(cnpjLimpo)) {
+            cnpjInput.style.borderColor = '#4CAF50';
+          } else {
+            cnpjInput.style.borderColor = '#e74c3c';
+          }
+        } else {
+          cnpjInput.style.borderColor = '#ddd';
+        }
+      });
+  
+      cnpjInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          consultarCNPJ();
+        }
+      });
+    }
+
+    // Implementação da função exportarPDF
+    function exportarPDF() {
+      if (resultadoDiv.style.display === 'none') {
+        alert('Faça uma consulta primeiro.');
+        return;
+      }
+      
+      // Mostrar um indicador de carregamento
+      const loadingElem = document.createElement('div');
+      loadingElem.className = 'loader';
+      loadingElem.style.display = 'block';
+      loadingElem.id = 'pdf-loader';
+      document.body.appendChild(loadingElem);
+      
+      // Configurar o objeto jsPDF
+      const { jsPDF } = window.jspdf;
+      
+      // Preparar página para captura
+      const cnpjConsultado = cnpjInput.value;
+      
+      // Criar clone do resultado sem botões interativos
+      const conteudoPDF = resultadoDiv.cloneNode(true);
+      
+      // Remover botões e elementos interativos que não devem aparecer no PDF
+      const botoesInterativos = conteudoPDF.querySelectorAll('button');
+      botoesInterativos.forEach(botao => botao.remove());
+      
+      // Ocultar o elemento de mapa no clone
+      const mapaClone = conteudoPDF.querySelector('#mapa');
+      if (mapaClone) mapaClone.remove();
+      
+      // Ajustar conteúdo para PDF
+      conteudoPDF.style.display = 'block';
+      conteudoPDF.style.position = 'absolute';
+      conteudoPDF.style.top = '-9999px';
+      conteudoPDF.style.background = 'white';
+      conteudoPDF.style.width = '800px';
+      conteudoPDF.style.padding = '20px';
+      document.body.appendChild(conteudoPDF);
+      
+      // Usar html2canvas para capturar o conteúdo como imagem
+      html2canvas(conteudoPDF, {
+        scale: 1,
+        logging: false,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      }).then(canvas => {
+        // Criar novo PDF com orientação retrato
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 40;
+        
+        // Adicionar título
+        pdf.setFontSize(18);
+        pdf.text("Consulta CNPJ", pageWidth / 2, 30, { align: 'center' });
+        pdf.setFontSize(12);
+        pdf.text(`CNPJ: ${cnpjConsultado}`, pageWidth / 2, 50, { align: 'center' });
+        pdf.text(`Data da consulta: ${new Date().toLocaleDateString('pt-BR')}`, pageWidth / 2, 70, { align: 'center' });
+        
+        // Adicionar linha separadora
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, 80, pageWidth - margin, 80);
+        
+        // Obter a imagem do canvas e calcular proporção
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - (2 * margin);
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        let heightLeft = imgHeight;
+        let position = 100; // Posição inicial após o título
+        
+        // Adicionar a primeira página
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+        heightLeft -= (pageHeight - position);
+        
+        // Adicionar páginas adicionais se necessário
+        while (heightLeft > 0) {
+          position = 0;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', margin, position - (pageHeight - 100), imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+        
+        // Adicionar rodapé
+        const totalPages = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+          pdf.setPage(i);
+          pdf.setFontSize(10);
+          pdf.setTextColor(150);
+          pdf.text(`Página ${i} de ${totalPages}`, pageWidth - 60, pageHeight - 20);
+        }
+        
+        // Salvar o PDF
+        pdf.save(`cnpj-${cnpjConsultado.replace(/[^\d]/g, '')}.pdf`);
+        
+        // Limpar elementos temporários
+        conteudoPDF.remove();
+        document.getElementById('pdf-loader').remove();
+      });
+    }
+
+    // Melhorar a função mostrarMapa para geocodificar o endereço corretamente
+function mostrarMapa(endereco) {
+  const mapaDiv = document.getElementById('mapa');
+  
+  // Alternar visibilidade do mapa
+  if (mapaDiv.style.display === 'none') {
+    // Mostrar o mapa
+    mapaDiv.style.display = 'block';
+    mapaDiv.innerHTML = ''; // Limpar conteúdo anterior
+    
+    try {
+      // Criar container para o mapa
+      const mapContainer = document.createElement('div');
+      mapContainer.id = 'map-container';
+      mapContainer.style.height = '400px';
+      mapaDiv.appendChild(mapContainer);
+      
+      // Inicializar o mapa com zoom mais fechado para mostrar a cidade
+      const map = L.map('map-container').setView([-23.5505, -46.6333], 15);
+      
+      // Adicionar camada do OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      
+      // Usar o serviço Nominatim para geocodificar o endereço (é o serviço de geocodificação do OpenStreetMap)
+      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(endereco)}&limit=1`;
+      
+      fetch(geocodeUrl)
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            // Coordenadas encontradas
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            
+            // Atualizar a visualização do mapa
+            map.setView([lat, lon], 17);
+            
+            // Adicionar marcador
+            const marker = L.marker([lat, lon]).addTo(map);
+            marker.bindPopup(`<b>${endereco}</b>`).openPopup();
+          } else {
+            // Geocodificação falhou, usar plano alternativo
+            // Adicionar um marcador na cidade/estado usando o código que já temos
+            const enderecoParts = endereco.split(',');
+            const cidade = enderecoParts[enderecoParts.length - 2] || '';
+            const estado = enderecoParts[enderecoParts.length - 1] || '';
+            
+            // Link direto para Google Maps como solução alternativa
+            const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
+            
+            map.setView([-23.5505, -46.6333], 10);
+            L.popup()
+              .setLatLng([-23.5505, -46.6333])
+              .setContent(`<p>Endereço: ${endereco}</p>
+                          <a href="${googleMapsLink}" target="_blank" style="color: blue; text-decoration: underline;">
+                          Ver no Google Maps</a>`)
+              .openOn(map);
+          }
+        })
+        .catch(error => {
+          console.error("Erro ao geocodificar:", error);
+          // Em caso de erro, mostrar ao menos a visualização da cidade/estado
+          const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
+          map.setView([-23.5505, -46.6333], 10);
+          L.popup()
+            .setLatLng([-23.5505, -46.6333])
+            .setContent(`<p>Endereço: ${endereco}</p>
+                        <a href="${googleMapsLink}" target="_blank" style="color: blue; text-decoration: underline;">
+                        Ver no Google Maps</a>`)
+            .openOn(map);
+        });
+
+      // Invalidar o tamanho para garantir que o mapa seja renderizado corretamente
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+    } catch (error) {
+      console.error("Erro ao renderizar o mapa:", error);
+      mapaDiv.innerHTML = `
+        <div style="background: #f5f5f5; padding: 20px; text-align: center;">
+          <p>Não foi possível mostrar o mapa para este endereço.</p>
+          <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}" 
+             target="_blank" 
+             style="display: inline-block; padding: 10px 20px; background: #4285F4; color: white; text-decoration: none; border-radius: 5px;">
+            Ver no Google Maps
+          </a>
+        </div>
+      `;
+    }
+  } else {
+    // Ocultar o mapa
+    mapaDiv.style.display = 'none';
+    mapaDiv.innerHTML = ''; // Limpar o conteúdo para evitar problemas de inicialização
+  }
+  
+  // Atualizar texto do botão
+  const mapButtons = document.querySelectorAll('.btn-map');
+  mapButtons.forEach(btn => {
+    btn.innerHTML = mapaDiv.style.display === 'none' ? 
+      '<i class="fa fa-map-marker"></i> Ver no mapa' : 
+      '<i class="fa fa-map-marker"></i> Ocultar mapa';
+  });
+}
+
+// Corrigir final da função mostrarMapa que está truncada
+function mostrarMapa(endereco) {
+  // Restante do código já foi implementado acima
+}
+
+    // Melhorar a função compartilharResultado
+function compartilharResultado(cnpj, razaoSocial) {
+  try {
+    const cnpjFormatado = cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    
+    // Criar URL de compartilhamento
+    const shareUrl = `${window.location.origin}${window.location.pathname}?cnpj=${cnpj}`;
+    const shareText = `Dados da empresa ${razaoSocial} (CNPJ: ${cnpjFormatado})`;
+    
+    if (navigator.share) {
+      // API Web Share (móveis modernos)
+      navigator.share({
+        title: `Consulta CNPJ: ${razaoSocial}`,
+        text: shareText,
+        url: shareUrl
+      })
+      .catch(err => {
+        console.error('Erro ao compartilhar:', err);
+        fallbackShare();
+      });
+    } else {
+      fallbackShare();
+    }
+    
+    // Fallback para desktop
+    function fallbackShare() {
+      // Criar um input temporário
+      const input = document.createElement('input');
+      input.value = shareUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      
+      alert(`Link copiado para a área de transferência!\nVocê pode compartilhar os dados de "${razaoSocial}"`);
+    }
+  } catch (error) {
+    console.error('Erro ao compartilhar:', error);
+    alert('Não foi possível compartilhar este resultado');
+  }
+}
+
+    // Função para limpar ações anteriores
+    function limparAcoesAnteriores() {
+      // Remover todos os botões de ação anteriores
+      document.querySelectorAll('.actions').forEach(el => el.remove());
+    }
+
+    // Carregar o histórico ao iniciar a página
+    document.addEventListener('DOMContentLoaded', function() {
+      // Verificar se está rodando via protocolo file (potenciais problemas de CORS)
+      if (window.location.protocol === 'file:') {
+        const corsWarning = document.createElement('div');
+        corsWarning.className = 'card';
+        corsWarning.style.backgroundColor = '#fff3cd';
+        corsWarning.style.color = '#856404';
+        corsWarning.style.marginBottom = '20px';
+        corsWarning.innerHTML = `
+          <h3>⚠️ Aviso: Possíveis problemas de CORS</h3>
+          <p>Esta página pode ter problemas ao acessar a API quando aberta diretamente do arquivo local.</p>
+          <p><strong>Soluções:</strong></p>
+          <ol>
+            <li>Use uma extensão como "CORS Unblock" ou "Allow CORS"</li>
+            <li>Hospede esta página em um servidor web local</li>
+          </ol>
+          <button id="dismiss-cors-warning" style="font-size: 12px; padding: 5px 10px;">Entendi</button>
+        `;
+        
+        document.querySelector('.container').insertAdjacentElement('afterbegin', corsWarning);
+        
+        document.getElementById('dismiss-cors-warning').addEventListener('click', function() {
+          corsWarning.style.display = 'none';
+        });
+      }
+      
+      // Continuar com o restante do código...
+      limparAcoesAnteriores();
+      atualizarHistoricoUI();
+      
+      // Verificar se a URL tem um parâmetro de CNPJ para consulta automática
+      const urlParams = new URLSearchParams(window.location.search);
+      const cnpjParam = urlParams.get('cnpj');
+      if (cnpjParam) {
+        cnpjInput.value = cnpjParam;
+        consultarCNPJ();
+      }
+    });
+
+// Adicionar toggle de modo escuro
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-theme');
+  const isDarkMode = document.body.classList.contains('dark-theme');
+  localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
+  
+  // Atualizar o botão
+  const darkModeButton = document.getElementById('dark-mode-toggle');
+  if (darkModeButton) {
+    darkModeButton.innerHTML = isDarkMode ? '☀️' : '🌙';
+    darkModeButton.setAttribute('aria-label', isDarkMode ? 'Modo claro' : 'Modo escuro');
+  }
+}
+
+// Adicionar botão de modo escuro
+const darkModeButton = document.createElement('button');
+darkModeButton.id = 'dark-mode-toggle';
+darkModeButton.className = 'mode-toggle';
+darkModeButton.innerHTML = '🌙';
+darkModeButton.setAttribute('aria-label', 'Alternar modo escuro');
+darkModeButton.addEventListener('click', toggleDarkMode);
+
+// Adicionar no evento DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+  // ... código existente ...
+  
+  // Adicionar botão de dark mode
+  document.body.appendChild(darkModeButton);
+  
+  // Verificar preferência salva de dark mode
+  if (localStorage.getItem('darkMode') === 'enabled') {
+    document.body.classList.add('dark-theme');
+    darkModeButton.innerHTML = '☀️';
+  }
+  
+  // ... resto do código existente ...
+});
+
+// Funções para o modal de documentação
+function openModal() {
+  document.getElementById('documentacao-modal').style.display = 'block';
+}
+
+function closeModal() {
+  document.getElementById('documentacao-modal').style.display = 'none';
+}
+
+function openTab(evt, tabName) {
+  // Ocultar todos os conteúdos de tab
+  var tabcontent = document.getElementsByClassName("tabcontent");
+  for (var i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+
+  // Remover a classe "active" de todos os botões de tab
+  var tablinks = document.getElementsByClassName("tablinks");
+  for (var i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+
+  // Mostrar o conteúdo da tab atual e marcar o botão como ativo
+  document.getElementById(tabName).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+
+// Configurar os event listeners do modal quando o documento estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+  // Resto do código...
+  
+  // Adicionar o botão de informações
+  const infoButton = document.createElement('button');
+  infoButton.className = 'info-button';
+  infoButton.innerHTML = 'ℹ️';
+  infoButton.setAttribute('aria-label', 'Sobre esta aplicação');
+  infoButton.addEventListener('click', openModal);
+  document.body.appendChild(infoButton);
+  
+  // Configurar o modal de documentação
+  const closeButtons = document.getElementsByClassName('modal-close');
+  for (let i = 0; i < closeButtons.length; i++) {
+    closeButtons[i].addEventListener('click', closeModal);
+  }
+  
+  // Fechar o modal quando clicar fora do conteúdo
+  window.addEventListener('click', function(event) {
+    const modal = document.getElementById('documentacao-modal');
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+  
+  // Mostrar a primeira tab por padrão
+  document.getElementsByClassName('tablinks')[0].click();
+  
+  // Resto do código existente...
+});
+  </script>
+
+<!-- Adicione este código antes de fechar a tag </body> -->
+<!-- Modal de Documentação -->
+<div id="documentacao-modal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close">&times;</span>
+    <h2>Sobre esta Aplicação</h2>
+    
+    <div class="tab">
+      <button class="tablinks active" onclick="openTab(event, 'visao-geral')">Visão Geral</button>
+      <button class="tablinks" onclick="openTab(event, 'tecnologias')">Tecnologias</button>
+      <button class="tablinks" onclick="openTab(event, 'ui-ux')">UI/UX</button>
+      <button class="tablinks" onclick="openTab(event, 'performance')">Performance</button>
+      <button class="tablinks" onclick="openTab(event, 'seguranca')">Segurança</button>
+      <button class="tablinks" onclick="openTab(event, 'acessibilidade')">Acessibilidade</button>
+    </div>
+
+    <div id="visao-geral" class="tabcontent" style="display: block;">
+      <h3>Consulta de CNPJ</h3>
+      <p>Esta aplicação permite consultar informações detalhadas de empresas brasileiras utilizando o número de CNPJ. Os dados são obtidos através da API pública BrasilAPI.</p>
+      <p>Recursos principais:</p>
+      <ul>
+        <li>Consulta de dados cadastrais de empresas</li>
+        <li>Visualização do endereço no mapa</li>
+        <li>Exportação dos resultados em PDF</li>
+        <li>Histórico de consultas recentes</li>
+        <li>Compartilhamento de resultados</li>
+      </ul>
+    </div>
+
+    <div id="tecnologias" class="tabcontent">
+      <h3>Tecnologias Utilizadas</h3>
+      <ul>
+        <li><strong>Frontend:</strong> HTML5, CSS3, JavaScript Vanilla (ES6+)</li>
+        <li><strong>APIs:</strong> BrasilAPI (dados de CNPJ), Nominatim OpenStreetMap (geocodificação)</li>
+        <li><strong>Bibliotecas:</strong>
+          <ul>
+            <li>Leaflet.js - Renderização de mapas interativos</li>
+            <li>jsPDF - Geração de documentos PDF</li>
+            <li>html2canvas - Captura de elementos HTML para PDF</li>
+          </ul>
+        </li>
+        <li><strong>Armazenamento:</strong> localStorage (histórico de consultas)</li>
+        <li><strong>Metodologia:</strong> JavaScript modular, manipulação de DOM nativa</li>
+      </ul>
+    </div>
+
+    <div id="ui-ux" class="tabcontent">
+      <h3>Interface e Experiência do Usuário</h3>
+      <ul>
+        <li><strong>Design responsivo:</strong> Adaptação para diferentes tamanhos de tela</li>
+        <li><strong>Feedback visual:</strong> Loaders durante carregamento, formatação automática de CNPJ</li>
+        <li><strong>Tratamento de erros:</strong> Mensagens claras e informativas</li>
+        <li><strong>Histórico:</strong> Acesso rápido às consultas anteriores</li>
+        <li><strong>Exportação:</strong> Opções para imprimir ou gerar PDF</li>
+        <li><strong>Visualização:</strong> Organização de informações em cards temáticos</li>
+      </ul>
+    </div>
+
+    <div id="performance" class="tabcontent">
+      <h3>Otimizações de Performance</h3>
+      <ul>
+        <li><strong>Cache de consultas:</strong> Armazenamento temporário de resultados</li>
+        <li><strong>Carregamento sob demanda:</strong> Mapas e recursos visuais inicializados apenas quando necessário</li>
+        <li><strong>Rate limiting:</strong> Controle de número de requisições por minuto</li>
+        <li><strong>Tempo de resposta:</strong> Feedback imediato durante operações assíncronas</li>
+        <li><strong>Sanitização de dados:</strong> Limpeza e formatação de dados para visualização rápida</li>
+      </ul>
+    </div>
+
+    <div id="seguranca" class="tabcontent">
+      <h3>Medidas de Segurança</h3>
+      <ul>
+        <li><strong>Sanitização de HTML:</strong> Prevenção contra XSS</li>
+        <li><strong>Validação de entrada:</strong> Verificação rigorosa do formato CNPJ</li>
+        <li><strong>Tratamento de erros:</strong> Captura e gestão de exceções</li>
+        <li><strong>Proteção CORS:</strong> Gestão de requisições cross-origin</li>
+        <li><strong>Rate limiting:</strong> Prevenção contra sobrecarga de requisições</li>
+      </ul>
+    </div>
+
+    <div id="acessibilidade" class="tabcontent">
+      <h3>Recursos de Acessibilidade</h3>
+      <ul>
+        <li><strong>Semântica HTML:</strong> Uso apropriado de elementos HTML5</li>
+        <li><strong>Atributos ARIA:</strong> Melhor integração com leitores de tela</li>
+        <li><strong>Contraste de cores:</strong> Legibilidade aprimorada para o texto</li>
+        <li><strong>Navegação por teclado:</strong> Suporte para interagir sem mouse</li>
+        <li><strong>Mensagens de erro:</strong> Texto claro e orientações para correção</li>
+        <li><strong>Botões e controles:</strong> Dimensões adequadas para interação em touchscreens</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <p>&copy; <span id="copyright-year">2023</span> Desenvolvido por Marco Túlio | Consulta CNPJ</footer>
+
+<script>
+  // Atualizar o ano do copyright automaticamente
+  document.getElementById('copyright-year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
