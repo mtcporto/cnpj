@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Consulta CNPJ - BrasilAPI</title>
+  <meta name="description" content="Consulte dados cadastrais de empresas brasileiras por CNPJ usando a BrasilAPI.">
+  <meta property="og:title" content="Consulta CNPJ">
+  <meta property="og:description" content="Consulta de dados cadastrais de empresas brasileiras por CNPJ.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Consulta CNPJ","applicationCategory":"BusinessApplication","operatingSystem":"Web"}</script>
 
 <!-- Adicionar Leaflet CSS -->
    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -302,19 +308,152 @@
   z-index: 100;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
+
+/* Identidade visual moderna */
+:root {
+  --primary-color: #2563eb;
+  --primary-dark: #1d4ed8;
+  --accent-color: #14b8a6;
+  --bg-color: #f4f7fb;
+  --text-color: #172033;
+  --muted-color: #64748b;
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --card-border: #dbe4f0;
+  --radius-lg: 20px;
+  --shadow: 0 18px 50px rgba(30, 64, 175, 0.10);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 48px 20px 32px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(37, 99, 235, .14), transparent 32%),
+    radial-gradient(circle at 90% 10%, rgba(20, 184, 166, .12), transparent 28%),
+    var(--bg-color);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.55;
+}
+
+.container { max-width: 860px; }
+
+h1 {
+  margin: 0 0 8px;
+  color: var(--text-color);
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: -0.055em;
+}
+
+.container::before {
+  content: "Dados empresariais de forma rápida e confiável";
+  display: block;
+  margin-bottom: 28px;
+  color: var(--muted-color);
+  font-size: 1rem;
+}
+
+.input-group {
+  gap: 10px;
+  align-items: stretch;
+  padding: 8px;
+  margin: 28px 0 16px;
+  background: rgba(255,255,255,.76);
+  border: 1px solid rgba(219, 228, 240, .95);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .06);
+}
+
+input {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-color);
+  font-size: 1rem;
+}
+
+input:focus { box-shadow: 0 0 0 3px rgba(37, 99, 235, .18); }
+
+button {
+  border-radius: 11px;
+  background: var(--primary-color);
+  font-weight: 700;
+  transition: transform .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+button:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, .22);
+}
+
+#btnConsultar { min-width: 132px; }
+
+#resultado {
+  margin-top: 22px;
+  padding: clamp(20px, 4vw, 34px);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+.card {
+  padding: 18px 20px;
+  margin: 14px 0;
+  background: rgba(248, 250, 252, .9);
+  border: 1px solid #e5eaf2;
+  border-left: 4px solid var(--accent-color);
+  border-radius: 14px;
+}
+
+.card h3 { margin-top: 0; color: var(--text-color); }
+.empresa-header { gap: 18px; }
+.logo-placeholder { background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+.actions { flex-wrap: wrap; gap: 10px; }
+.actions button { min-height: 44px; }
+.loader { border-top-color: var(--primary-color); }
+.footer { color: var(--muted-color); border-top-color: var(--card-border); }
+
+.dark-theme {
+  --bg-color: #0b1220;
+  --text-color: #e5eefc;
+  --muted-color: #9aa9c1;
+  --card-bg: rgba(17, 27, 46, .94);
+  --card-border: #263653;
+  --shadow: 0 18px 50px rgba(0, 0, 0, .28);
+}
+
+.dark-theme .input-group,
+.dark-theme .card { background: rgba(20, 32, 54, .86); border-color: var(--card-border); }
+.dark-theme input { color: var(--text-color); }
+
+@media (max-width: 600px) {
+  body { padding: 32px 14px 24px; }
+  .input-group { flex-direction: column; padding: 8px; }
+  #btnConsultar { width: 100%; }
+  .actions { flex-direction: column; }
+  .actions button { width: 100%; }
+  .mode-toggle { top: 14px; right: 14px; }
+}
   </style>
 </head>
 <body>
+  <noscript><p class="card">Esta aplicação consulta dados de CNPJ pela BrasilAPI. Ative o JavaScript para realizar consultas interativas.</p></noscript>
   <div class="container">
     <h1>Consulta CNPJ</h1>
     
     <div class="input-group">
-      <input type="text" id="cnpj" placeholder="Digite o CNPJ" maxlength="18" aria-label="Insira o CNPJ para consulta">
-      <button id="btnConsultar" onclick="consultarCNPJ()" aria-label="Consultar CNPJ">Consultar</button>
+      <input type="text" id="cnpj" placeholder="Digite o CNPJ" maxlength="18" inputmode="numeric" autocomplete="off" aria-label="Insira o CNPJ para consulta">
+      <button id="btnConsultar" type="button" onclick="consultarCNPJ()" aria-label="Consultar CNPJ">Consultar</button>
     </div>
     
     <div class="loader" id="loader"></div>
-    <div id="resultado"></div>
+    <div id="resultado" aria-live="polite" aria-atomic="true"></div>
 
   </div>
 
@@ -771,7 +910,14 @@
       try {
         // Tentativa 1: API BrasilAPI
         try {
-          const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10000);
+          let response;
+          try {
+            response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`, { signal: controller.signal });
+          } finally {
+            clearTimeout(timeout);
+          }
           
           // Se recebemos uma resposta 429 (Too Many Requests), precisamos esperar
           if (response.status === 429) {
@@ -800,6 +946,9 @@
           
           return data;
         } catch (error) {
+          if (error.name === 'AbortError') {
+            throw new Error('A consulta demorou mais que o esperado. Tente novamente.');
+          }
           // Se for um erro de CORS ou rate limit, tentamos utilizar um proxy CORS
           if (error.message.includes("CORS") || error.message.includes("Limite de consultas")) {
             throw new Error(
@@ -812,24 +961,6 @@
         }
       } catch (error) {
         throw error;
-      }
-    }
-
-    // Adicionar consulta via proxies CORS públicos
-    async function consultarCNPJComProxy(cnpj) {
-      try {
-        // Usando allOrigins como proxy CORS público
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`)}`;
-        const response = await fetch(proxyUrl);
-        
-        if (!response.ok) {
-          throw new Error("Erro ao consultar via proxy");
-        }
-        
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        throw new Error("Falha na consulta via proxy: " + error.message);
       }
     }
 

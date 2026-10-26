@@ -1,0 +1,6 @@
+{
+  "name": "consulta-cnpj",
+  "private": true,
+  "type": "module",
+  "scripts": {"test": "node --test"}
+}

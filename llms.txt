@@ -1,0 +1,13 @@
+# Consulta CNPJ
+
+Aplicação web para consulta interativa de dados cadastrais de empresas brasileiras.
+
+## Funcionalidades
+
+- Validação e formatação de CNPJ no navegador.
+- Consulta direta à BrasilAPI.
+- Histórico local, cache, mapa, impressão, PDF, compartilhamento e tema claro/escuro.
+
+## Fonte de dados
+
+Os dados cadastrais são obtidos da BrasilAPI. A aplicação não oferece API própria nem endpoint MCP neste momento.
