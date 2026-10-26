@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatCNPJ, validateCNPJ } from '../js/cnpj-utils.js';
+import { formatCNPJ, validateCNPJ } from '../js/validation.js';
 
 test('valida CNPJ válido e rejeita inválidos', () => {
   assert.equal(validateCNPJ('11.222.333/0001-81'), true);

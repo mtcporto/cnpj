@@ -1,0 +1,3 @@
+export function share(cnpj,name){const url=`${location.origin}${location.pathname}?cnpj=${encodeURIComponent(cnpj)}`;if(navigator.share)return navigator.share({title:`Consulta CNPJ: ${name}`,text:`Dados da empresa ${name}`,url});return navigator.clipboard?.writeText(url).then(()=>alert('Link copiado para a área de transferência.'))}
+export function printResult(){window.print()}
+export async function exportPDF(){if(!window.jspdf||!window.html2canvas)throw new Error('Exportação PDF indisponível.');const canvas=await html2canvas(document.querySelector('.result-card'));const pdf=new jspdf.jsPDF();const width=pdf.internal.pageSize.getWidth()-24;pdf.addImage(canvas.toDataURL('image/png'),'PNG',12,12,width,width*canvas.height/canvas.width);pdf.save('consulta-cnpj.pdf')}
